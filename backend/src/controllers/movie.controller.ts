@@ -1,40 +1,24 @@
 import axios from "axios";
-import type { Request, Response } from "express";
+import { movieQueue } from "../queues/movie.queue.js";
+import { Request, Response } from "express";
 
-export const fetchMovieFromOMDb = async (req: Request, res: Response) => {
-  try {
-    const { title } = req.body;
+export const fetchMovieFromOMDb = async (req:Request, res:Response) => {
+  const { title } = req.body;
 
-    if (!title) {
-      return res.status(400).json({
-        message: "Movie title is required",
-      });
-    }
+  const response = await axios.get(
+    `https://www.omdbapi.com/?t=${title}&apikey=${process.env.OMDB_API_KEY}`
+  );
 
-    const response = await axios.get("https://www.omdbapi.com/", {
-      params: {
-        t: title,
-        apikey: process.env.OMDB_API_KEY,
-      },
-    });
-
-    if (response.data.Response === "False") {
-      return res.status(404).json({
-        message: response.data.Error,
-      });
-    }
-
-    // 🚫 Not storing anything yet (dummy route)
-    return res.json({
-      message: "Movie fetched successfully from OMDb",
-      data: response.data,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch movie from OMDb",
-    });
+  if (response.data.Response === "False") {
+    return res.status(404).json({ message: "Movie not found" });
   }
-};
- const getMovie = ()=>{
 
-}
+  await movieQueue.add("import-movie", {
+    omdbData: response.data,
+    adminId: req.user?.id,
+  });
+
+  return res.json({
+    message: "Movie added to queue for processing",
+  });
+};

@@ -1,77 +1,85 @@
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-import { Schema } from "mongoose";
+const MovieSchema = new Schema(
+  {
+    imdbId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
 
-const MovieSchema = new Schema({
-    name:{
-        type:String,
-        required:true,
+    title: {
+      type: String,
+      required: true,
+      index: true,
     },
-    description:{
-        type:String,
-        required:true
+
+    description: {
+      type: String,
     },
-    releaseDate:{
-        type:String,
-        required:true
+
+    releaseYear: {
+      type: Number,
+      index: true,
     },
-    postedBy: {
+
+    duration: {
+      type: Number, // in minutes
+    },
+
+    genre: {
+      type: [String],
+      index: true,
+    },
+
+    imdbRating: {
+      type: Number,
+      min: 0,
+      max: 10,
+    },
+
+    poster: {
+      type: String,
+    },
+
+    source: {
+      type: String,
+      default: "OMDb",
+    },
+
+    createdBy: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "User", 
       required: true,
     },
-    rating:{
-        type:Number,
-    },
+
     ratings: [
       {
         user: {
           type: Schema.Types.ObjectId,
           ref: "User",
-          required: true,
         },
         value: {
           type: Number,
           min: 1,
           max: 5,
-          required: true,
+          required:true,
         },
-    }],
-    duration:{
-        type:String,
-        required:true,
-    },
-    liked:[
-        {
-            user:{
-                type:Schema.Types.ObjectId,
-                ref:"User",
-                required:true,
-            },
-            value:{
-                type:Boolean,
-                required:true,
-            }
-        }
-    ]
+      },
+    ],
+  },
+  { timestamps: true }
+);
 
-},{
-    timestamps:true,
-})
+// Virtual average rating
+MovieSchema.virtual("averageRating").get(function () {
+  if (!this.ratings.length) return 0;
+  const sum = this.ratings.reduce((a, r) => a + r.value, 0);
+  return Number((sum / this.ratings.length).toFixed(1));
+});
 
 MovieSchema.set("toJSON", { virtuals: true });
 MovieSchema.set("toObject", { virtuals: true });
 
-
-MovieSchema.virtual("averageRating").get(function () {
-  if (this.ratings.length === 0) return 0;
-
-  const sum = this.ratings.reduce(
-    (acc: number, curr: any) => acc + curr.value,
-    0
-  );
-
-  return (sum / this.ratings.length).toFixed(1);
-});
-
-const MovieModel = mongoose.model('Movie',MovieSchema)
+export default mongoose.model("Movie", MovieSchema);
