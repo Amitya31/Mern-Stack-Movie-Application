@@ -53,7 +53,7 @@ export const Register = async (req:Request,res:Response)=>{
         success:true
     })
     }catch(e){
-        return res.status(500).json({
+    return res.status(500).json({
       message: "Internal server error",
       success: false,
     });
@@ -71,7 +71,7 @@ export const Login = async (req:Request,res:Response)=>{
             })
         }
 
-        const user = await UserModel.findOne({email})
+        const user = await UserModel.findOne({email}).select("+password")
 
         if(!user){
             return res.status(404).json({
@@ -80,9 +80,9 @@ export const Login = async (req:Request,res:Response)=>{
             })
         }
 
-        const userPassword = await bcrypt.compare(user.password,process.env.SECRET_KEY as string)
+       const isMatch = await bcrypt.compare(password, user.password);
  
-        if(!userPassword===password){
+        if(!isMatch){
             return res.status(404).json({
                 message:"Password is invalid",
                 success:false
@@ -93,13 +93,18 @@ export const Login = async (req:Request,res:Response)=>{
 
         return res.status(200).json({
             user,
+            token,
             success:true,
             message:"Login successfull"
         })
 
     }catch(e){
+        if(e instanceof Error){
+            console.error(e.message)
+        }
         return res.status(500).json({
         message: "Internal server error",
+
         success: false,
     });
     }

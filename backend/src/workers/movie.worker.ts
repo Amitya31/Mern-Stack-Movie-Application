@@ -1,29 +1,67 @@
 import { Worker } from "bullmq";
-import MovieModel from "../models/movie.model.js";
+import axios from "axios";
+import dotenv from "dotenv";
 import connection from "../config/redis.js";
+import connectToDB from "../config/db.js";
+import MovieModel from "../models/movie.model.js";
 
-export const movieWorker = new Worker(
+dotenv.config();
+
+const OMDB_URL = "https://www.omdbapi.com/";
+
+// 🔑 CONNECT TO MONGODB FIRST
+await connectToDB();
+
+console.log("OMDB_API_KEY =", process.env.OMDB_API_KEY as string);
+
+
+new Worker(
   "movie-import",
   async (job) => {
-    const { omdbData, adminId } = job.data;
+    try {
+      const { imdbId } = job.data;
+      console.log("🔄 Processing:", imdbId);
+      console.log(process.env.OMDB_API_KEY)
+      const response = await axios.get(OMDB_URL, {
+        params: {
+          i: imdbId,
+          apikey: process.env.OMDB_API_KEY as string,
+        },
+      });
+      
 
-    const duration = parseInt(omdbData.Runtime); // "142 min" → 142
+      if (response.data.Response === "False") {
+        throw new Error(response.data.Error);
+      }
 
-    await MovieModel.findOneAndUpdate(
-      { imdbId: omdbData.imdbID },
-      {
-        imdbId: omdbData.imdbID,
-        title: omdbData.Title,
-        description: omdbData.Plot,
-        releaseYear: Number(omdbData.Year),
-        duration,
-        genre: omdbData.Genre?.split(", "),
-        imdbRating: Number(omdbData.imdbRating),
-        poster: omdbData.Poster,
-        createdBy: adminId,
-      },
-      { upsert: true, new: true }
-    );
+      const data = response.data;
+      const duration = parseInt(data.Runtime);
+
+      const movie = await MovieModel.findOneAndUpdate(
+        { imdbId: data.imdbID },
+        {
+          imdbId: data.imdbID,
+          title: data.Title,
+          description: data.Plot,
+          releaseYear: Number(data.Year),
+          duration: isNaN(duration) ? null : duration,
+          genre: data.Genre?.split(", "),
+          imdbRating: Number(data.imdbRating),
+          poster: data.Poster,
+          source: "OMDb",
+        },
+        { upsert: true, new: true, runValidators: true }
+      );
+
+      console.log("✅ Inserted:", movie.title);
+    } catch (err: any) {
+      console.error("❌ JOB FAILED:", job.data.imdbId);
+      console.error(err.response?.data || err.message || err);
+      throw err; // IMPORTANT so BullMQ knows it failed
+    }
   },
-  { connection }
+  {
+    connection,
+    concurrency: 3,
+  }
 );

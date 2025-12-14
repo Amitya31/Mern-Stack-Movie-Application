@@ -48,11 +48,11 @@ const MovieSchema = new Schema(
       default: "OMDb",
     },
 
-    createdBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User", 
-      required: true,
-    },
+    // createdBy: {
+    //   type: Schema.Types.ObjectId,
+    //   ref: "User", 
+    //   required: true,
+    // },
 
     ratings: [
       {
@@ -72,7 +72,11 @@ const MovieSchema = new Schema(
   { timestamps: true }
 );
 
-// Virtual average rating
+MovieSchema.index({
+  title: "text",
+  description: "text",
+});
+
 MovieSchema.virtual("averageRating").get(function () {
   if (!this.ratings.length) return 0;
   const sum = this.ratings.reduce((a, r) => a + r.value, 0);

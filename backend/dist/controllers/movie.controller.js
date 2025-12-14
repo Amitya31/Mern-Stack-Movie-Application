@@ -1,33 +1,104 @@
-import axios from "axios";
-import dotenv from "dotenv";
-dotenv.config();
-export const fetchMovieFromOMDb = async (req, res) => {
+import { imdbTop250 } from "../data/imdbTop250.js";
+import { movieQueue } from "../queues/movie.queue.js";
+import movieModel from "../models/movie.model.js";
+export const importTop250Movies = async (req, res) => {
+    for (const imdbId of imdbTop250) {
+        await movieQueue.add("import-movie", {
+            imdbId
+        }, { jobId: imdbId });
+    }
+    return res.json({
+        message: "250 movies queued for import",
+        total: imdbTop250.length,
+    });
+};
+export const getMovies = async (req, res) => {
     try {
-        const { title } = req.body;
-        if (!title) {
-            return res.status(400).json({
-                message: "Movie title is required",
-            });
+        const { genre, sortBy = "rating", order = "desc", page = "1", limit = "10", } = req.query;
+        const filters = {};
+        // 🎭 Filter by genre
+        if (genre) {
+            filters.genre = { $in: [genre] };
         }
-        const response = await axios.get("https://www.omdbapi.com/", {
-            params: {
-                t: title,
-                apikey: process.env.OMDB_API_KEY,
-            },
-        });
-        if (response.data.Response === "False") {
-            return res.status(404).json({
-                message: response.data.Error,
-            });
+        // 🔃 Sorting
+        const sortOptions = {};
+        const sortOrder = order === "asc" ? 1 : -1;
+        switch (sortBy) {
+            case "rating":
+                sortOptions.imdbRating = sortOrder;
+                break;
+            case "year":
+                sortOptions.releaseYear = sortOrder;
+                break;
+            case "title":
+                sortOptions.title = sortOrder; // alphabetical
+                break;
+            case "duration":
+                sortOptions.duration = sortOrder;
+                break;
+            default:
+                sortOptions.imdbRating = -1;
         }
-        return res.json({
-            message: "Movie fetched successfully from OMDb",
-            data: response.data,
+        //Pagination
+        const pageNumber = parseInt(page);
+        const pageSize = parseInt(limit);
+        const skip = (pageNumber - 1) * pageSize;
+        const [movies, total] = await Promise.all([
+            movieModel.find(filters)
+                .sort(sortOptions)
+                .skip(skip)
+                .limit(pageSize)
+                .lean(),
+            movieModel.countDocuments(filters),
+        ]);
+        return res.status(200).json({
+            success: true,
+            total,
+            page: pageNumber,
+            totalPages: Math.ceil(total / pageSize),
+            data: movies,
         });
     }
     catch (error) {
         return res.status(500).json({
-            message: "Failed to fetch movie from OMDb",
+            success: false,
+            message: "Failed to fetch movies",
+        });
+    }
+};
+export const searchMovies = async (req, res) => {
+    try {
+        const { q, page = "1", limit = "10" } = req.query;
+        if (!q) {
+            return res.status(400).json({
+                success: false,
+                message: "Search query is required",
+            });
+        }
+        const pageNumber = parseInt(page);
+        const pageSize = parseInt(limit);
+        const skip = (pageNumber - 1) * pageSize;
+        const [movies, total] = await Promise.all([
+            movieModel.find({ $text: { $search: q } }, { score: { $meta: "textScore" } })
+                .sort({ score: { $meta: "textScore" } })
+                .skip(skip)
+                .limit(pageSize)
+                .lean(),
+            movieModel.countDocuments({ $text: { $search: q } }),
+        ]);
+        return res.status(200).json({
+            success: true,
+            query: q,
+            total,
+            page: pageNumber,
+            totalPages: Math.ceil(total / pageSize),
+            data: movies,
+        });
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Search failed",
         });
     }
 };

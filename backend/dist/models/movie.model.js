@@ -1,32 +1,52 @@
-import mongoose from "mongoose";
-import { Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 const MovieSchema = new Schema({
-    name: {
+    imdbId: {
         type: String,
         required: true,
+        unique: true,
+        index: true,
+    },
+    title: {
+        type: String,
+        required: true,
+        index: true,
     },
     description: {
         type: String,
-        required: true
     },
-    releaseDate: {
-        type: String,
-        required: true
-    },
-    postedBy: {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-    },
-    rating: {
+    releaseYear: {
         type: Number,
+        index: true,
     },
+    duration: {
+        type: Number, // in minutes
+    },
+    genre: {
+        type: [String],
+        index: true,
+    },
+    imdbRating: {
+        type: Number,
+        min: 0,
+        max: 10,
+    },
+    poster: {
+        type: String,
+    },
+    source: {
+        type: String,
+        default: "OMDb",
+    },
+    // createdBy: {
+    //   type: Schema.Types.ObjectId,
+    //   ref: "User", 
+    //   required: true,
+    // },
     ratings: [
         {
             user: {
                 type: Schema.Types.ObjectId,
                 ref: "User",
-                required: true,
             },
             value: {
                 type: Number,
@@ -34,35 +54,20 @@ const MovieSchema = new Schema({
                 max: 5,
                 required: true,
             },
-        }
+        },
     ],
-    duration: {
-        type: String,
-        required: true,
-    },
-    liked: [
-        {
-            user: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-                required: true,
-            },
-            value: {
-                type: Boolean,
-                required: true,
-            }
-        }
-    ]
-}, {
-    timestamps: true,
+}, { timestamps: true });
+MovieSchema.index({
+    title: "text",
+    description: "text",
+});
+MovieSchema.virtual("averageRating").get(function () {
+    if (!this.ratings.length)
+        return 0;
+    const sum = this.ratings.reduce((a, r) => a + r.value, 0);
+    return Number((sum / this.ratings.length).toFixed(1));
 });
 MovieSchema.set("toJSON", { virtuals: true });
 MovieSchema.set("toObject", { virtuals: true });
-MovieSchema.virtual("averageRating").get(function () {
-    if (this.ratings.length === 0)
-        return 0;
-    const sum = this.ratings.reduce((acc, curr) => acc + curr.value, 0);
-    return (sum / this.ratings.length).toFixed(1);
-});
-const MovieModel = mongoose.model('Movie', MovieSchema);
+export default mongoose.model("Movie", MovieSchema);
 //# sourceMappingURL=movie.model.js.map

@@ -46,15 +46,15 @@ export const Login = async (req, res) => {
                 success: false,
             });
         }
-        const user = await UserModel.findOne({ email });
+        const user = await UserModel.findOne({ email }).select("+password");
         if (!user) {
             return res.status(404).json({
                 message: "User unauthorized",
                 success: true
             });
         }
-        const userPassword = await bcrypt.compare(user.password, process.env.SECRET_KEY);
-        if (!userPassword === password) {
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
             return res.status(404).json({
                 message: "Password is invalid",
                 success: false
@@ -63,11 +63,15 @@ export const Login = async (req, res) => {
         const token = await user.createToken();
         return res.status(200).json({
             user,
+            token,
             success: true,
             message: "Login successfull"
         });
     }
     catch (e) {
+        if (e instanceof Error) {
+            console.error(e.message);
+        }
         return res.status(500).json({
             message: "Internal server error",
             success: false,
