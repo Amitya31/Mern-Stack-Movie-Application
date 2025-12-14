@@ -9,10 +9,7 @@ dotenv.config();
 
 const OMDB_URL = "https://www.omdbapi.com/";
 
-// 🔑 CONNECT TO MONGODB FIRST
 await connectToDB();
-
-console.log("OMDB_API_KEY =", process.env.OMDB_API_KEY as string);
 
 
 new Worker(
@@ -20,7 +17,7 @@ new Worker(
   async (job) => {
     try {
       const { imdbId } = job.data;
-      console.log("🔄 Processing:", imdbId);
+      console.log("Processing:", imdbId);
       console.log(process.env.OMDB_API_KEY)
       const response = await axios.get(OMDB_URL, {
         params: {
@@ -53,11 +50,11 @@ new Worker(
         { upsert: true, new: true, runValidators: true }
       );
 
-      console.log("✅ Inserted:", movie.title);
+      console.log("Inserted:", movie.title);
     } catch (err: any) {
-      console.error("❌ JOB FAILED:", job.data.imdbId);
+      console.error("JOB FAILED:", job.data.imdbId);
       console.error(err.response?.data || err.message || err);
-      throw err; // IMPORTANT so BullMQ knows it failed
+      throw err; 
     }
   },
   {

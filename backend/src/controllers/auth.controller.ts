@@ -47,12 +47,20 @@ export const Register = async (req:Request,res:Response)=>{
 
 
     return res.status(200).json({
-        User,
+        user: {
+            _id: User._id,
+            username: User.username,
+            email: User.email,
+            role: User.role,
+        },
         token,
         message:"Registration Successful",
         success:true
     })
     }catch(e){
+    if(e instanceof Error){
+            console.error(e.message)
+        }
     return res.status(500).json({
       message: "Internal server error",
       success: false,

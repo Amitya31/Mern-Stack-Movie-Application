@@ -59,7 +59,6 @@ export const getMovies = async (req: Request, res: Response) => {
         sortOptions.imdbRating = -1;
     }
 
-    //Pagination
     const pageNumber = parseInt(page as string);
     const pageSize = parseInt(limit as string);
     const skip = (pageNumber - 1) * pageSize;
