@@ -1,4 +1,3 @@
-$content = @'
 ### 🎬 MERN Stack Movie Application
 
 MERN STACK APPLICATION
@@ -6,6 +5,8 @@ MERN STACK APPLICATION
 This is a full-stack Movie Management System developed using the MERN stack. The application allows users to browse, search, and sort movies, while admins can manage movie records through an admin dashboard.
 
 This project focuses on REST API design, authentication, role-based access control, pagination, and deployment.
+
+PROJECT URL = https://mern-stack-movie-application.vercel.app
 
 **Prerequisites**
 - Node.js v16+ and npm
@@ -89,3 +90,4 @@ Success: 200 updated movie
 DELETE /api/v1/admin/movies/:id
 Auth: Admin only
 Success: 200 deletion confirmation
+```
