@@ -6,7 +6,7 @@ import {type AdminMovie } from "../types/movie";
 
 interface MovieFormProps {
   movie: AdminMovie | null;
-  onSuccess: () => Promise<void>;
+  onSuccess: () => void;
 }
 
 export default function AdminMovieForm({ movie, onSuccess }: MovieFormProps) {

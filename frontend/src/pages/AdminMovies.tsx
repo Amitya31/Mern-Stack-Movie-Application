@@ -1,43 +1,61 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
   Card,
   CardContent,
   Typography,
+  Pagination,
 } from "@mui/material";
 import api from "../api/axios";
 import AdminMovieForm from "../components/AdminMovieForm";
 import {type AdminMovie } from "../types/movie";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 export default function AdminMovies() {
   const [movies, setMovies] = useState<AdminMovie[]>([]);
   const [editMovie, setEditMovie] = useState<AdminMovie | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const fetchMovies = useCallback(async () => {
-    const res = await api.get("/movies");
-    setMovies(res.data.data);
-  }, []);
+  const LIMIT = 10;
 
+  // ✅ React-approved pattern
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchMovies();
-  }, [fetchMovies]);
 
-  const handleSuccess = async () => {
-    await fetchMovies();
-    setEditMovie(null);
-  };
+
+    const loadMovies = async () => {
+      try {
+        const res = await api.get("/movies", {
+          params: { page, limit: LIMIT },
+        });
+
+
+        setMovies(Array.isArray(res.data?.data) ? res.data.data : []);
+        setTotalPages(res.data?.totalPages ?? 1);
+      } catch {
+        toast.error("Failed to fetch movies");
+      }
+    };
+
+    loadMovies();
+
+    
+  }, [page]);
 
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/admin/movies/${id}`);
-      toast.success("Movie deleted ");
-      fetchMovies();
+      toast.success("Movie deleted");
+      setPage(1); 
     } catch {
-      toast.error("Failed to delete movie");
+      toast.error("Delete failed");
     }
+  };
+
+  const handleSuccess = () => {
+    setEditMovie(null);
+    setPage(1); // refresh list after add/edit
   };
 
   return (
@@ -63,10 +81,7 @@ export default function AdminMovies() {
               </Typography>
 
               <Box>
-                <Button onClick={() => setEditMovie(movie)}>
-                  Edit
-                </Button>
-
+                <Button onClick={() => setEditMovie(movie)}>Edit</Button>
                 <Button
                   color="error"
                   onClick={() => handleDelete(movie._id)}
@@ -77,6 +92,14 @@ export default function AdminMovies() {
             </CardContent>
           </Card>
         ))}
+      </Box>
+
+      <Box mt={4} display="flex" justifyContent="center">
+        <Pagination
+          count={totalPages}
+          page={page}
+          onChange={(_, value) => setPage(value)}
+        />
       </Box>
     </Box>
   );

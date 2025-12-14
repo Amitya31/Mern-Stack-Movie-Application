@@ -9,8 +9,11 @@ dotenv.config();
 const PORT = process.env.PORT || 3000;
 const app = express();
 app.use(cors({
-    origin: "http://localhost:5173", // Vite default
-    credentials: true,
+    origin: [
+        "http://localhost:5173",
+        "https://mern-stack-movie-application.vercel.app"
+    ],
+    credentials: true
 }));
 app.use(express.json());
 const startServer = async () => {
